@@ -63,6 +63,7 @@ button:hover {
 
 .match h2 {
     margin-top: 0;
+    text-align: center;
 }
 
 .bet {
@@ -72,7 +73,7 @@ button:hover {
     border-radius: 8px;
 }
 
-/* Větší obrazovky */
+/* větší obrazovky */
 @media (min-width: 600px) {
     .bet-form {
         display: flex;
@@ -88,6 +89,15 @@ button:hover {
         width: auto;
         margin-bottom: 0;
     }
+
+    .team-row {
+        display: flex;
+        gap: 10px;
+    }
+
+    .team-row input {
+        flex: 1;
+    }
 }
 </style>
 </head>
@@ -97,7 +107,11 @@ button:hover {
 <div class="container">
     <h1>🏀 Basket Sázky</h1>
 
-    <input type="text" id="matchName" placeholder="Název zápasu (např. Lakers vs Bulls)">
+    <div class="team-row">
+        <input type="text" id="team1" placeholder="Tým 1">
+        <input type="text" id="team2" placeholder="Tým 2">
+    </div>
+
     <button onclick="createMatch()">Vytvořit zápas</button>
 
     <div id="matches"></div>
@@ -111,11 +125,20 @@ function saveData() {
 }
 
 function createMatch() {
-    const name = document.getElementById("matchName").value;
-    if (!name) return;
+    const team1 = document.getElementById("team1").value;
+    const team2 = document.getElementById("team2").value;
 
-    matches.push({ name: name, bets: [] });
-    document.getElementById("matchName").value = "";
+    if (!team1 || !team2) return;
+
+    matches.push({ 
+        team1: team1, 
+        team2: team2, 
+        bets: [] 
+    });
+
+    document.getElementById("team1").value = "";
+    document.getElementById("team2").value = "";
+
     saveData();
     render();
 }
@@ -145,11 +168,11 @@ function render() {
         div.className = "match";
 
         div.innerHTML = `
-            <h2>${match.name}</h2>
+            <h2>${match.team1} 🆚 ${match.team2}</h2>
 
             <div class="bet-form">
                 <input type="text" id="player${index}" placeholder="Jméno">
-                <input type="text" id="tip${index}" placeholder="Tip (kdo vyhraje)">
+                <input type="text" id="tip${index}" placeholder="Tip (např. ${match.team1})">
                 <button onclick="addBet(${index})">Přidat</button>
             </div>
 
@@ -159,6 +182,7 @@ function render() {
                 ${match.bets.map(b => `<div class="bet">${b.player} → ${b.tip}</div>`).join("")}
             </div>
         `;
+
         container.appendChild(div);
     });
 }
