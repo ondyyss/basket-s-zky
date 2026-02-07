@@ -57,6 +57,7 @@ button {
 .primary { background: #ff9500; color: black; }
 .teamBtn { background: #2c2c38; color: white; }
 .teamBtn:hover { background: #3a3a4a; }
+.deleteBtn { background: #ff3b30; color: white; }
 
 .disabled {
     background: #555 !important;
@@ -109,6 +110,9 @@ function saveData() {
     localStorage.setItem("totalScores", JSON.stringify(totalScores));
 }
 
+const team1Input = document.getElementById("team1");
+const team2Input = document.getElementById("team2");
+
 function createMatch() {
     const team1 = team1Input.value;
     const team2 = team2Input.value;
@@ -129,8 +133,13 @@ function createMatch() {
     render();
 }
 
-const team1Input = document.getElementById("team1");
-const team2Input = document.getElementById("team2");
+function deleteMatch(index) {
+    if (!confirm("Opravdu chceš smazat tento zápas?")) return;
+
+    matches.splice(index, 1);
+    saveData();
+    render();
+}
 
 function addBet(index, team) {
     if (matches[index].locked) return;
@@ -139,9 +148,7 @@ function addBet(index, team) {
     if (!player) return;
 
     matches[index].bets.push({ player, tip: team });
-
-    // 🔒 uzamkne po prvním tipu
-    matches[index].locked = true;
+    matches[index].locked = true; // 🔒 uzamkne po prvním tipu
 
     saveData();
     render();
@@ -201,7 +208,7 @@ function render() {
                     ${match.team2}
                 </button>
 
-                ${match.locked ? "<div style='text-align:center; margin:8px;'>🔒 Sázky uzamčeny</div>" : ""}
+                ${match.locked ? "<div style='text-align:center;margin:8px;'>🔒 Sázky uzamčeny</div>" : ""}
 
                 <input type="number" id="score1_${index}" placeholder="Skóre ${match.team1}">
                 <input type="number" id="score2_${index}" placeholder="Skóre ${match.team2}">
@@ -211,6 +218,10 @@ function render() {
             `}
 
             ${betsHTML}
+
+            <button class="deleteBtn" onclick="deleteMatch(${index})">
+                🗑 Smazat zápas
+            </button>
         `;
 
         container.appendChild(card);
