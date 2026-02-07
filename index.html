@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Basket Sázky</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #111, #1c1c1c);
+    color: white;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 800px;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+input {
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    width: 100%;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+button {
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    background: orange;
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+.match {
+    background: #222;
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 12px;
+}
+
+.match h2 {
+    margin-top: 0;
+}
+
+.bet {
+    background: #333;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 8px;
+}
+
+/* Větší obrazovky */
+@media (min-width: 600px) {
+    .bet-form {
+        display: flex;
+        gap: 10px;
+    }
+
+    .bet-form input {
+        flex: 1;
+        margin-bottom: 0;
+    }
+
+    .bet-form button {
+        width: auto;
+        margin-bottom: 0;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>🏀 Basket Sázky</h1>
+
+    <input type="text" id="matchName" placeholder="Název zápasu (např. Lakers vs Bulls)">
+    <button onclick="createMatch()">Vytvořit zápas</button>
+
+    <div id="matches"></div>
+</div>
+
+<script>
+let matches = JSON.parse(localStorage.getItem("matches")) || [];
+
+function saveData() {
+    localStorage.setItem("matches", JSON.stringify(matches));
+}
+
+function createMatch() {
+    const name = document.getElementById("matchName").value;
+    if (!name) return;
+
+    matches.push({ name: name, bets: [] });
+    document.getElementById("matchName").value = "";
+    saveData();
+    render();
+}
+
+function addBet(index) {
+    const player = document.getElementById("player"+index).value;
+    const tip = document.getElementById("tip"+index).value;
+    if (!player || !tip) return;
+
+    matches[index].bets.push({ player, tip });
+    saveData();
+    render();
+}
+
+function deleteMatch(index) {
+    matches.splice(index, 1);
+    saveData();
+    render();
+}
+
+function render() {
+    const container = document.getElementById("matches");
+    container.innerHTML = "";
+
+    matches.forEach((match, index) => {
+        const div = document.createElement("div");
+        div.className = "match";
+
+        div.innerHTML = `
+            <h2>${match.name}</h2>
+
+            <div class="bet-form">
+                <input type="text" id="player${index}" placeholder="Jméno">
+                <input type="text" id="tip${index}" placeholder="Tip (kdo vyhraje)">
+                <button onclick="addBet(${index})">Přidat</button>
+            </div>
+
+            <button onclick="deleteMatch(${index})" style="background:red;">Smazat zápas</button>
+
+            <div>
+                ${match.bets.map(b => `<div class="bet">${b.player} → ${b.tip}</div>`).join("")}
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+render();
+</script>
+
+</body>
+</html>
