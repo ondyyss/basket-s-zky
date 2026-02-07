@@ -52,6 +52,7 @@ button {
 .primary { background:#ff9500; color:black; }
 .danger { background:#ff3b30; color:white; }
 .locked { background:#444 !important; cursor:not-allowed; }
+.secondary { background:#2a2a36; color:white; }
 
 .bet {
     background:#2a2a36;
@@ -70,6 +71,7 @@ button {
     display:flex;
     justify-content:center;
     align-items:center;
+    z-index:1000;
 }
 
 .modal-content {
@@ -79,6 +81,8 @@ button {
     width:90%;
     max-width:400px;
 }
+
+.hidden { display:none; }
 </style>
 </head>
 
@@ -101,147 +105,222 @@ button {
 let matches = JSON.parse(localStorage.getItem("matches")) || [];
 
 function save(){
-localStorage.setItem("matches", JSON.stringify(matches));
+    localStorage.setItem("matches", JSON.stringify(matches));
 }
 
 function createMatch(){
-if(!team1.value || !team2.value) return;
-
-matches.push({
-team1:team1.value,
-team2:team2.value,
-bets:[]
-});
-
-team1.value="";
-team2.value="";
-save();
-render();
+    if(!team1.value || !team2.value) return;
+    
+    matches.push({
+        team1:team1.value,
+        team2:team2.value,
+        bets:[]
+    });
+    
+    team1.value="";
+    team2.value="";
+    save();
+    render();
 }
 
 function showDeleteModal(index){
-document.getElementById("modalContainer").innerHTML=`
-<div class="modal">
-<div class="modal-content">
-<h3>Opravdu chceš smazat tento zápas?</h3>
-<button class="danger" onclick="deleteMatch(${index})">Ano, smazat</button>
-<button onclick="closeModal()">Zrušit</button>
-</div>
-</div>`;
+    document.getElementById("modalContainer").innerHTML=`
+    <div class="modal">
+        <div class="modal-content">
+            <h3>Opravdu chceš smazat tento zápas?</h3>
+            <button class="danger" onclick="deleteMatch(${index})">Ano, smazat</button>
+            <button class="secondary" onclick="closeModal()">Zrušit</button>
+        </div>
+    </div>`;
 }
 
 function closeModal(){
-document.getElementById("modalContainer").innerHTML="";
+    document.getElementById("modalContainer").innerHTML="";
 }
 
 function deleteMatch(index){
-matches.splice(index,1);
-save();
-closeModal();
-render();
+    matches.splice(index,1);
+    save();
+    closeModal();
+    render();
+}
+
+function updateBetFields(matchIndex, betType){
+    const extraField = document.getElementById("extra"+matchIndex);
+    const extraField2 = document.getElementById("extra2_"+matchIndex);
+    const extra3Field = document.getElementById("extra3_"+matchIndex);
+    const teamSelField = document.getElementById("teamSel"+matchIndex);
+    
+    // Skrýt všechny
+    if(extraField) extraField.classList.add("hidden");
+    if(extraField2) extraField2.classList.add("hidden");
+    if(extra3Field) extra3Field.classList.add("hidden");
+    if(teamSelField) teamSelField.classList.add("hidden");
+    
+    // Zobrazit podle typu
+    switch(betType){
+        case "winner":
+            teamSelField.classList.remove("hidden");
+            break;
+        case "margin":
+            teamSelField.classList.remove("hidden");
+            extraField.classList.remove("hidden");
+            break;
+        case "playerPoints":
+            teamSelField.classList.remove("hidden");
+            extraField.classList.remove("hidden");
+            extraField2.classList.remove("hidden");
+            break;
+        case "playerFouls":
+            teamSelField.classList.remove("hidden");
+            extraField.classList.remove("hidden");
+            extraField2.classList.remove("hidden");
+            break;
+        case "currentShot":
+            extraField.classList.remove("hidden");
+            break;
+        case "freeThrows":
+            teamSelField.classList.remove("hidden");
+            extraField.classList.remove("hidden");
+            extraField2.classList.remove("hidden");
+            break;
+    }
 }
 
 function addBet(i){
-let name=document.getElementById("name"+i).value;
-let type=document.getElementById("betType"+i).value;
-let period=document.getElementById("period"+i).value;
-
-if(!name) return;
-
-let desc="";
-let extra=document.getElementById("extra"+i)?.value || "";
-let teamSel=document.getElementById("teamSel"+i)?.value || "";
-
-switch(type){
-case "winner":
-desc=`${teamSel} vyhraje`;
-break;
-case "margin":
-desc=`${teamSel} vyhraje o více než ${extra} bodů`;
-break;
-case "points":
-desc=`Hráč ${extra} bude mít více/méně bodů`;
-break;
-}
-
-matches[i].bets.push({
-creator:name,
-desc:desc,
-period:period,
-accepted:null,
-locked:false
-});
-
-save();
-render();
+    let name=document.getElementById("name"+i).value;
+    let type=document.getElementById("betType"+i).value;
+    let period=document.getElementById("period"+i).value;
+    
+    if(!name) return;
+    
+    let desc="";
+    let m = matches[i];
+    let teamSel=document.getElementById("teamSel"+i)?.value || "";
+    
+    switch(type){
+        case "winner":
+            desc=`${teamSel} vyhraje zápas`;
+            break;
+        case "margin":
+            let margin=document.getElementById("extra"+i)?.value || "0";
+            desc=`${teamSel} vyhraje o více než ${margin} bodů`;
+            break;
+        case "playerPoints":
+            let playerNum=document.getElementById("extra"+i)?.value || "";
+            let pointsValue=document.getElementById("extra2_"+i)?.value || "0.5";
+            let pointsDir=document.getElementById("extra3_"+i)?.value || "více";
+            desc=`${teamSel} - Hráč #${playerNum} ${pointsDir} než ${pointsValue} bodů`;
+            break;
+        case "playerFouls":
+            let playerFoulsNum=document.getElementById("extra"+i)?.value || "";
+            let foulsValue=document.getElementById("extra2_"+i)?.value || "0.5";
+            let foulsDir=document.getElementById("extra3_"+i)?.value || "více";
+            desc=`${teamSel} - Hráč #${playerFoulsNum} ${foulsDir} než ${foulsValue} faulů`;
+            break;
+        case "currentShot":
+            let shotResult=document.getElementById("extra"+i)?.value || "Dá";
+            desc=`Aktuální hod: ${shotResult} (1 nebo 2)`;
+            break;
+        case "freeThrows":
+            let ftPlayerNum=document.getElementById("extra"+i)?.value || "";
+            let ftValue=document.getElementById("extra2_"+i)?.value || "0.5";
+            let ftDir=document.getElementById("extra3_"+i)?.value || "více";
+            desc=`${teamSel} - Hráč #${ftPlayerNum} bude házet ${ftDir} než ${ftValue} trestných hodů`;
+            break;
+    }
+    
+    matches[i].bets.push({
+        creator:name,
+        desc:desc,
+        period:period,
+        accepted:null,
+        locked:false
+    });
+    
+    save();
+    render();
 }
 
 function respondBet(matchIndex,betIndex,response){
-let bet=matches[matchIndex].bets[betIndex];
-if(bet.locked) return;
-
-bet.accepted=response;
-bet.locked=true;
-
-save();
-render();
+    let bet=matches[matchIndex].bets[betIndex];
+    if(bet.locked) return;
+    
+    bet.accepted=response;
+    bet.locked=true;
+    
+    save();
+    render();
 }
 
 function render(){
-let container=document.getElementById("matches");
-container.innerHTML="";
-
-matches.forEach((m,i)=>{
-let card=document.createElement("div");
-card.className="card";
-
-card.innerHTML=`
-<h2>${m.team1} 🆚 ${m.team2}</h2>
-
-<input id="name${i}" placeholder="Tvoje jméno">
-
-<select id="betType${i}">
-<option value="winner">🏆 Vítěz zápasu</option>
-<option value="margin">📊 Výhra o X bodů</option>
-<option value="points">🎯 Hráč více/méně bodů</option>
-</select>
-
-<select id="teamSel${i}">
-<option>${m.team1}</option>
-<option>${m.team2}</option>
-</select>
-
-<input id="extra${i}" placeholder="Hodnota (např. 10 nebo číslo hráče)">
-
-<select id="period${i}">
-<option>Celý zápas</option>
-<option>1. čtvrtina</option>
-<option>2. čtvrtina</option>
-<option>3. čtvrtina</option>
-<option>4. čtvrtina</option>
-</select>
-
-<button class="primary" onclick="addBet(${i})">Vytvořit sázku</button>
-
-${m.bets.map((b,bi)=>`
-<div class="bet">
-<b>${b.creator}</b>: ${b.desc}<br>
-<small>${b.period}</small><br>
-
-${!b.locked ? `
-<button onclick="respondBet(${i},${bi},'Souhlasím')">✔ Souhlasím</button>
-<button onclick="respondBet(${i},${bi},'Nesouhlasím')">✖ Nesouhlasím</button>
-` : `
-<div>🔒 Uzamčeno (${b.accepted})</div>
-`}
-</div>
-`).join("")}
-
-<button class="danger" onclick="showDeleteModal(${i})">🗑 Smazat zápas</button>
-`;
-
-container.appendChild(card);
-});
+    let container=document.getElementById("matches");
+    container.innerHTML="";
+    
+    matches.forEach((m,i)=>{
+        let card=document.createElement("div");
+        card.className="card";
+        
+        card.innerHTML=`
+        <h2>${m.team1} 🆚 ${m.team2}</h2>
+        
+        <input id="name${i}" placeholder="Tvoje jméno">
+        
+        <select id="betType${i}" onchange="updateBetFields(${i}, this.value)">
+            <option value="winner">🏆 Vítěz zápasu</option>
+            <option value="margin">📊 Výhra o X bodů</option>
+            <option value="playerPoints">🎯 Hráč více/méně bodů</option>
+            <option value="playerFouls">🚫 Hráč více/méně faulů</option>
+            <option value="currentShot">🎲 Aktuální hod</option>
+            <option value="freeThrows">🔄 Hráč trestné hody</option>
+        </select>
+        
+        <select id="teamSel${i}" class="hidden">
+            <option>${m.team1}</option>
+            <option>${m.team2}</option>
+        </select>
+        
+        <input id="extra${i}" class="hidden" placeholder="Hodnota (např. body, číslo hráče, Dá/Nedá)">
+        <input id="extra2_${i}" class="hidden" placeholder="Více/Méně než (např. 0.5, 2.5)">
+        <select id="extra3_${i}" class="hidden">
+            <option>více</option>
+            <option>méně</option>
+        </select>
+        
+        <select id="period${i}">
+            <option>Celý zápas</option>
+            <option>1. čtvrtina</option>
+            <option>2. čtvrtina</option>
+            <option>3. ��tvrtina</option>
+            <option>4. čtvrtina</option>
+        </select>
+        
+        <button class="primary" onclick="addBet(${i})">Vytvořit sázku</button>
+        
+        ${m.bets.map((b,bi)=>`
+        <div class="bet">
+            <b>${b.creator}</b>: ${b.desc}<br>
+            <small>${b.period}</small><br>
+            
+            ${!b.locked ? `
+            <button onclick="respondBet(${i},${bi},'Souhlasím')">✔ Souhlasím</button>
+            <button onclick="respondBet(${i},${bi},'Nesouhlasím')">✖ Nesouhlasím</button>
+            ` : `
+            <div>🔒 Uzamčeno (${b.accepted})</div>
+            `}
+        </div>
+        `).join("")}
+        
+        <button class="danger" onclick="showDeleteModal(${i})">🗑 Smazat zápas</button>
+        `;
+        
+        container.appendChild(card);
+    });
+    
+    // Inicializuj pole pro první sázku
+    matches.forEach((m,i) => {
+        updateBetFields(i, "winner");
+    });
 }
 
 render();
