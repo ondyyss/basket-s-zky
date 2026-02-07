@@ -6,155 +6,168 @@
 <title>Basket Sázky</title>
 
 <style>
-* {
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #111, #1c1c1c);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0f0f14;
     color: white;
-    display: flex;
-    justify-content: center;
 }
 
 .container {
-    width: 100%;
-    max-width: 800px;
-    padding: 20px;
+    max-width: 500px;
+    margin: auto;
+    padding: 15px;
 }
 
 h1 {
     text-align: center;
+    margin-bottom: 20px;
+}
+
+.card {
+    background: #1c1c24;
+    padding: 15px;
+    border-radius: 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
 }
 
 input {
-    padding: 12px;
-    border-radius: 8px;
-    border: none;
     width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
     margin-bottom: 10px;
-    font-size: 16px;
+    font-size: 15px;
 }
 
 button {
-    padding: 12px;
-    border-radius: 8px;
-    border: none;
-    background: orange;
-    font-weight: bold;
-    cursor: pointer;
     width: 100%;
-    margin-bottom: 10px;
-    font-size: 16px;
+    padding: 12px;
+    border-radius: 14px;
+    border: none;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    margin-bottom: 8px;
 }
 
-button:hover {
-    opacity: 0.9;
-}
+.primary { background: #ff9500; color: black; }
+.teamBtn { background: #2c2c38; color: white; }
+.teamBtn:hover { background: #3a3a4a; }
 
-.match {
-    background: #222;
-    padding: 15px;
-    margin-top: 20px;
-    border-radius: 12px;
-}
-
-.match h2 {
-    margin-top: 0;
-    text-align: center;
+.disabled {
+    background: #555 !important;
+    cursor: not-allowed;
 }
 
 .bet {
-    background: #333;
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 8px;
+    background: #2a2a36;
+    padding: 8px;
+    border-radius: 10px;
+    margin-top: 5px;
 }
 
-/* větší obrazovky */
-@media (min-width: 600px) {
-    .bet-form {
-        display: flex;
-        gap: 10px;
-    }
+.winner { background: #1f7a1f; }
 
-    .bet-form input {
-        flex: 1;
-        margin-bottom: 0;
-    }
-
-    .bet-form button {
-        width: auto;
-        margin-bottom: 0;
-    }
-
-    .team-row {
-        display: flex;
-        gap: 10px;
-    }
-
-    .team-row input {
-        flex: 1;
-    }
+.scoreboard {
+    background: #1c1c24;
+    padding: 15px;
+    border-radius: 18px;
 }
 </style>
 </head>
 
 <body>
-
 <div class="container">
-    <h1>🏀 Basket Sázky</h1>
 
-    <div class="team-row">
-        <input type="text" id="team1" placeholder="Tým 1">
-        <input type="text" id="team2" placeholder="Tým 2">
-    </div>
+<h1>🏀 Basket Sázky</h1>
 
-    <button onclick="createMatch()">Vytvořit zápas</button>
+<div class="card">
+    <input type="text" id="team1" placeholder="Tým 1">
+    <input type="text" id="team2" placeholder="Tým 2">
+    <button class="primary" onclick="createMatch()">Vytvořit zápas</button>
+</div>
 
-    <div id="matches"></div>
+<div id="matches"></div>
+
+<div class="scoreboard">
+    <h2>🏆 Celkové skóre</h2>
+    <div id="totalScores"></div>
+</div>
+
 </div>
 
 <script>
 let matches = JSON.parse(localStorage.getItem("matches")) || [];
+let totalScores = JSON.parse(localStorage.getItem("totalScores")) || {};
 
 function saveData() {
     localStorage.setItem("matches", JSON.stringify(matches));
+    localStorage.setItem("totalScores", JSON.stringify(totalScores));
 }
 
 function createMatch() {
-    const team1 = document.getElementById("team1").value;
-    const team2 = document.getElementById("team2").value;
-
+    const team1 = team1Input.value;
+    const team2 = team2Input.value;
     if (!team1 || !team2) return;
 
-    matches.push({ 
-        team1: team1, 
-        team2: team2, 
-        bets: [] 
+    matches.push({
+        team1,
+        team2,
+        bets: [],
+        finished: false,
+        winner: null,
+        locked: false
     });
 
-    document.getElementById("team1").value = "";
-    document.getElementById("team2").value = "";
-
+    team1Input.value = "";
+    team2Input.value = "";
     saveData();
     render();
 }
 
-function addBet(index) {
+const team1Input = document.getElementById("team1");
+const team2Input = document.getElementById("team2");
+
+function addBet(index, team) {
+    if (matches[index].locked) return;
+
     const player = document.getElementById("player"+index).value;
-    const tip = document.getElementById("tip"+index).value;
-    if (!player || !tip) return;
+    if (!player) return;
 
-    matches[index].bets.push({ player, tip });
+    matches[index].bets.push({ player, tip: team });
+
+    // 🔒 uzamkne po prvním tipu
+    matches[index].locked = true;
+
     saveData();
     render();
 }
 
-function deleteMatch(index) {
-    matches.splice(index, 1);
+function setResult(index) {
+    const score1 = parseInt(document.getElementById("score1_"+index).value);
+    const score2 = parseInt(document.getElementById("score2_"+index).value);
+    if (isNaN(score1) || isNaN(score2)) return;
+
+    const match = matches[index];
+    match.finished = true;
+
+    if (score1 > score2) match.winner = match.team1;
+    else if (score2 > score1) match.winner = match.team2;
+    else match.winner = "Remíza";
+
+    if (match.winner !== "Remíza") {
+        match.bets.forEach(b => {
+            if (b.tip === match.winner) {
+                if (!totalScores[b.player]) totalScores[b.player] = 0;
+                totalScores[b.player]++;
+            }
+        });
+    }
+
     saveData();
     render();
 }
@@ -164,26 +177,56 @@ function render() {
     container.innerHTML = "";
 
     matches.forEach((match, index) => {
-        const div = document.createElement("div");
-        div.className = "match";
+        const card = document.createElement("div");
+        card.className = "card";
 
-        div.innerHTML = `
+        let betsHTML = match.bets.map(b => {
+            let cls = (match.finished && b.tip === match.winner) ? "bet winner" : "bet";
+            return `<div class="${cls}">${b.player} → ${b.tip}</div>`;
+        }).join("");
+
+        card.innerHTML = `
             <h2>${match.team1} 🆚 ${match.team2}</h2>
 
-            <div class="bet-form">
+            ${!match.finished ? `
                 <input type="text" id="player${index}" placeholder="Jméno">
-                <input type="text" id="tip${index}" placeholder="Tip (např. ${match.team1})">
-                <button onclick="addBet(${index})">Přidat</button>
-            </div>
 
-            <button onclick="deleteMatch(${index})" style="background:red;">Smazat zápas</button>
+                <button class="teamBtn ${match.locked ? "disabled" : ""}"
+                    onclick="addBet(${index}, '${match.team1}')">
+                    ${match.team1}
+                </button>
 
-            <div>
-                ${match.bets.map(b => `<div class="bet">${b.player} → ${b.tip}</div>`).join("")}
-            </div>
+                <button class="teamBtn ${match.locked ? "disabled" : ""}"
+                    onclick="addBet(${index}, '${match.team2}')">
+                    ${match.team2}
+                </button>
+
+                ${match.locked ? "<div style='text-align:center; margin:8px;'>🔒 Sázky uzamčeny</div>" : ""}
+
+                <input type="number" id="score1_${index}" placeholder="Skóre ${match.team1}">
+                <input type="number" id="score2_${index}" placeholder="Skóre ${match.team2}">
+                <button class="primary" onclick="setResult(${index})">Ukončit zápas</button>
+            ` : `
+                <h3>🏆 Vítěz: ${match.winner}</h3>
+            `}
+
+            ${betsHTML}
         `;
 
-        container.appendChild(div);
+        container.appendChild(card);
+    });
+
+    renderTotalScores();
+}
+
+function renderTotalScores() {
+    const div = document.getElementById("totalScores");
+    div.innerHTML = "";
+
+    const sorted = Object.entries(totalScores).sort((a,b) => b[1]-a[1]);
+
+    sorted.forEach(([player, score]) => {
+        div.innerHTML += `<div class="bet">${player} - ${score} bodů</div>`;
     });
 }
 
